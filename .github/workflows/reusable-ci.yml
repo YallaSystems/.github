@@ -1,0 +1,81 @@
+name: Reusable CI Workflow
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: 'Node.js version to use'
+        required: false
+        type: string
+        default: '22'
+      build-command:
+        description: 'Build command to run'
+        required: false
+        type: string
+        default: 'npm run build'
+      test-command:
+        description: 'Test command to run'
+        required: false
+        type: string
+        default: 'npm test'
+      lint-command:
+        description: 'Lint command to run'
+        required: false
+        type: string
+        default: 'npm run lint'
+      typecheck-command:
+        description: 'Type check command to run'
+        required: false
+        type: string
+        default: 'npm run typecheck'
+      skip-tests:
+        description: 'Skip running tests'
+        required: false
+        type: boolean
+        default: false
+      skip-lint:
+        description: 'Skip running linting'
+        required: false
+        type: boolean
+        default: false
+      skip-typecheck:
+        description: 'Skip running type checking'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@YallaSystems'
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build package
+        run: ${{ inputs.build-command }}
+
+      - name: Run linting
+        if: ${{ !inputs.skip-lint }}
+        run: ${{ inputs.lint-command }}
+        continue-on-error: false
+
+      - name: Run type checking
+        if: ${{ !inputs.skip-typecheck }}
+        run: ${{ inputs.typecheck-command }}
+        continue-on-error: false
+
+      - name: Run tests
+        if: ${{ !inputs.skip-tests }}
+        run: ${{ inputs.test-command }}
